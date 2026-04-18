@@ -12,7 +12,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Resend({
       apiKey: process.env.AUTH_RESEND_KEY,
-      from: "Promocionales PGC <onboarding@resend.dev>",
+      from: "Promocionales PGC <noreply@jpdigitalsolutionscol.com>",
     }),
   ],
   pages: {

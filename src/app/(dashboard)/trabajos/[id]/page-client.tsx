@@ -15,8 +15,10 @@ import {
 } from "@/components/ui/table";
 import { JobStatusBadge } from "@/components/shared/status-badge";
 import { PurchaseForm } from "@/components/compras/purchase-form";
+import { PaymentForm } from "@/components/trabajos/payment-form";
 import { advanceJobStatus, emitCuentaCobro } from "@/lib/actions/jobs";
 import { markPurchasePaid } from "@/lib/actions/purchases";
+import { deletePaymentReceived } from "@/lib/actions/payments";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -91,6 +93,7 @@ export function JobDetailClient({
   const { job, quote, purchases, payments, kpis } = data;
   const [ccOpen, setCcOpen] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const [payPurchaseId, setPayPurchaseId] = useState<number | null>(null);
   const [payFundingSourceId, setPayFundingSourceId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -120,6 +123,15 @@ export function JobDetailClient({
     setLoading(false);
     if (result.error) toast.error(result.error);
     else { toast.success("Cuenta de cobro emitida"); setCcOpen(false); router.refresh(); }
+  }
+
+  async function handleDeletePayment(paymentId: number) {
+    if (!confirm("¿Eliminar este pago? Se revertiran los movimientos de caja asociados.")) return;
+    setLoading(true);
+    const result = await deletePaymentReceived(paymentId);
+    setLoading(false);
+    if (result.error) toast.error(result.error);
+    else { toast.success("Pago eliminado"); router.refresh(); }
   }
 
   async function handleMarkPaid(formData: FormData) {
@@ -191,7 +203,16 @@ export function JobDetailClient({
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Pagos recibidos ({payments.length})</CardTitle></CardHeader>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Pagos recibidos ({payments.length})</CardTitle>
+              {job.estado === "facturado" && (
+                <Button size="sm" onClick={() => setPaymentOpen(true)}>
+                  Registrar pago
+                </Button>
+              )}
+            </div>
+          </CardHeader>
           <CardContent>
             {payments.length === 0 ? (
               <p className="text-sm text-muted-foreground">Aun no se han registrado pagos</p>
@@ -201,6 +222,8 @@ export function JobDetailClient({
                   <TableRow>
                     <TableHead>Fecha</TableHead>
                     <TableHead className="text-right">Monto</TableHead>
+                    <TableHead>Notas</TableHead>
+                    <TableHead className="w-[80px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -208,6 +231,20 @@ export function JobDetailClient({
                     <TableRow key={p.id}>
                       <TableCell>{formatDate(p.fecha)}</TableCell>
                       <TableCell className="text-right">{formatCOP(p.monto)}</TableCell>
+                      <TableCell className="max-w-[150px] truncate text-muted-foreground">
+                        {p.notas || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDeletePayment(p.id)}
+                          disabled={loading}
+                        >
+                          Eliminar
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -325,6 +362,20 @@ export function JobDetailClient({
               {loading ? "Guardando..." : "Confirmar pago"}
             </Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog registrar pago */}
+      <Dialog open={paymentOpen} onOpenChange={setPaymentOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Registrar pago recibido</DialogTitle></DialogHeader>
+          <PaymentForm
+            jobId={job.id}
+            jobCodigo={job.codigo}
+            pendienteCobro={kpis.pendienteCobro}
+            fundingSources={fundingSources}
+            onSuccess={() => { setPaymentOpen(false); router.refresh(); }}
+          />
         </DialogContent>
       </Dialog>
 

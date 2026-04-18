@@ -31,6 +31,8 @@ interface DashboardData {
     jobCodigo: string;
     quoteCodigo: string;
     precioTotal: number;
+    totalPaid: number;
+    pendiente: number;
     fechaEsperada: Date;
     diasRestantes: number;
     vencido: boolean;
@@ -95,7 +97,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Trabajo</TableHead>
-                    <TableHead className="text-right">Monto</TableHead>
+                    <TableHead className="text-right">Pendiente</TableHead>
                     <TableHead>Pago esperado</TableHead>
                     <TableHead>Estado</TableHead>
                   </TableRow>
@@ -112,7 +114,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
                         </Link>
                       </TableCell>
                       <TableCell className="text-right">
-                        {formatCOP(p.precioTotal)}
+                        {formatCOP(p.pendiente)}
                       </TableCell>
                       <TableCell>{formatDate(p.fechaEsperada)}</TableCell>
                       <TableCell>

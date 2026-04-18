@@ -1,16 +1,17 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { quotes, jobs, fundingSources, cashMovements } from "@/lib/db/schema";
+import { quotes, jobs, fundingSources, cashMovements, paymentsReceived } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { addDays, differenceInDays } from "date-fns";
 
 export async function getDashboardData() {
-  const [allQuotes, allJobs, allFundingSources, allMovements] = await Promise.all([
+  const [allQuotes, allJobs, allFundingSources, allMovements, allPayments] = await Promise.all([
     db.select().from(quotes),
     db.select().from(jobs),
     db.select().from(fundingSources).where(eq(fundingSources.activo, true)),
     db.select().from(cashMovements),
+    db.select().from(paymentsReceived),
   ]);
 
   const pendingQuotes = allQuotes.filter(
@@ -33,21 +34,30 @@ export async function getDashboardData() {
       const fechaEsperada = addDays(new Date(j.fechaEmisionCc!), 45);
       const diasRestantes = differenceInDays(fechaEsperada, now);
       const quote = allQuotes.find((q) => q.id === j.quoteId);
+      const jobPayments = allPayments.filter((p) => p.jobId === j.id);
+      const totalPaid = jobPayments.reduce((sum, p) => sum + p.monto, 0);
+      const precioTotal = quote?.precioTotal ?? 0;
+      const pendiente = precioTotal - totalPaid;
       return {
         jobId: j.id,
         jobCodigo: j.codigo,
         quoteCodigo: quote?.codigo ?? "",
-        precioTotal: quote?.precioTotal ?? 0,
+        precioTotal,
+        totalPaid,
+        pendiente,
         fechaEsperada,
         diasRestantes,
         vencido: diasRestantes < 0,
       };
     })
+    .filter((p) => p.pendiente > 0)
     .sort((a, b) => a.diasRestantes - b.diasRestantes);
 
   const totalCuentasPorCobrar = invoicedJobs.reduce((sum, j) => {
     const quote = allQuotes.find((q) => q.id === j.quoteId);
-    return sum + (quote?.precioTotal ?? 0);
+    const jobPayments = allPayments.filter((p) => p.jobId === j.id);
+    const totalPaid = jobPayments.reduce((s, p) => s + p.monto, 0);
+    return sum + (quote?.precioTotal ?? 0) - totalPaid;
   }, 0);
 
   // Calculate saldo afuera per funding source

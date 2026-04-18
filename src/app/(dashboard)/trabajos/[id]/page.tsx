@@ -1,4 +1,8 @@
 import { getJobWithDetails } from "@/lib/actions/jobs";
+import { getSuppliers } from "@/lib/actions/suppliers";
+import { db } from "@/lib/db";
+import { fundingSources } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { JobDetailClient } from "./page-client";
 
@@ -11,8 +15,19 @@ export default async function JobDetailPage({
   const jobId = parseInt(id, 10);
   if (isNaN(jobId)) notFound();
 
-  const data = await getJobWithDetails(jobId);
+  const [data, suppliers, allFundingSources] = await Promise.all([
+    getJobWithDetails(jobId),
+    getSuppliers(),
+    db.select().from(fundingSources).where(eq(fundingSources.activo, true)),
+  ]);
+
   if (!data) notFound();
 
-  return <JobDetailClient data={data} />;
+  return (
+    <JobDetailClient
+      data={data}
+      suppliers={suppliers}
+      fundingSources={allFundingSources}
+    />
+  );
 }

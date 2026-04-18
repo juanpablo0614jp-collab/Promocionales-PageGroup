@@ -1,8 +1,13 @@
-export default function TrabajosPage() {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Trabajos</h1>
-      <p className="text-muted-foreground">Proximamente...</p>
-    </div>
-  );
+import { getJobs } from "@/lib/actions/jobs";
+import { db } from "@/lib/db";
+import { quotes } from "@/lib/db/schema";
+import { TrabajosPageClient } from "./page-client";
+
+export default async function TrabajosPage() {
+  const [allJobs, allQuotes] = await Promise.all([
+    getJobs(),
+    db.select().from(quotes),
+  ]);
+
+  return <TrabajosPageClient jobs={allJobs} quotes={allQuotes} />;
 }

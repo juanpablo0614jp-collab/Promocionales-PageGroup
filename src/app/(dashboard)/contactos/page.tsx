@@ -1,8 +1,8 @@
-export default function ContactosPage() {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Contactos</h1>
-      <p className="text-muted-foreground">Proximamente...</p>
-    </div>
-  );
+import { getContacts } from "@/lib/actions/contacts";
+import { ContactsPageClient } from "./page-client";
+
+export default async function ContactosPage() {
+  const contacts = await getContacts();
+
+  return <ContactsPageClient contacts={contacts} />;
 }

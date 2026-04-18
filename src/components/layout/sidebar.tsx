@@ -4,6 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboardIcon },
@@ -17,70 +23,110 @@ const navigation = [
   { name: "Configuracion", href: "/configuracion", icon: SettingsIcon },
 ];
 
+// ── Desktop sidebar ────────────────────────────────────────────────
+
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <>
-      {/* Mobile overlay */}
-      <div
-        className={cn(
-          "fixed inset-0 z-40 bg-black/50 lg:hidden",
-          collapsed ? "hidden" : "hidden"
+    <aside
+      className={cn(
+        "hidden md:flex flex-col border-r bg-card transition-all duration-200",
+        collapsed ? "w-16" : "w-64"
+      )}
+    >
+      <div className="flex h-14 items-center border-b px-4">
+        {!collapsed && (
+          <Link href="/" className="flex items-center gap-2 font-bold">
+            <span className="text-lg">Promocionales PGC</span>
+          </Link>
         )}
-      />
-
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-card transition-all duration-200 lg:relative",
-          collapsed ? "w-16" : "w-64"
-        )}
-      >
-        <div className="flex h-14 items-center border-b px-4">
-          {!collapsed && (
-            <Link href="/" className="flex items-center gap-2 font-bold">
-              <span className="text-lg">Promocionales PGC</span>
-            </Link>
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className={cn(
+            "rounded-md p-1.5 hover:bg-accent",
+            collapsed ? "mx-auto" : "ml-auto"
           )}
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className={cn(
-              "rounded-md p-1.5 hover:bg-accent",
-              collapsed ? "mx-auto" : "ml-auto"
-            )}
-            aria-label={collapsed ? "Expandir menu" : "Colapsar menu"}
-          >
-            <ChevronIcon collapsed={collapsed} />
-          </button>
-        </div>
+          aria-label={collapsed ? "Expandir menu" : "Colapsar menu"}
+        >
+          <ChevronIcon collapsed={collapsed} />
+        </button>
+      </div>
 
+      <nav className="flex-1 space-y-1 p-2">
+        <NavLinks pathname={pathname} collapsed={collapsed} />
+      </nav>
+    </aside>
+  );
+}
+
+// ── Mobile sidebar (Sheet drawer) ──────────────────────────────────
+
+export function MobileSidebar({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const pathname = usePathname();
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="left" className="w-64 p-0">
+        <SheetHeader className="border-b px-4 py-3">
+          <SheetTitle>Promocionales PGC</SheetTitle>
+        </SheetHeader>
         <nav className="flex-1 space-y-1 p-2">
-          {navigation.map((item) => {
-            const isActive =
-              item.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                  collapsed && "justify-center px-2"
-                )}
-                title={collapsed ? item.name : undefined}
-              >
-                <item.icon className="h-5 w-5 shrink-0" />
-                {!collapsed && <span>{item.name}</span>}
-              </Link>
-            );
-          })}
+          <NavLinks
+            pathname={pathname}
+            collapsed={false}
+            onNavigate={() => onOpenChange(false)}
+          />
         </nav>
-      </aside>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+// ── Shared nav links ───────────────────────────────────────────────
+
+function NavLinks({
+  pathname,
+  collapsed,
+  onNavigate,
+}: {
+  pathname: string;
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <>
+      {navigation.map((item) => {
+        const isActive =
+          item.href === "/"
+            ? pathname === "/"
+            : pathname.startsWith(item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              isActive
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+              collapsed && "justify-center px-2"
+            )}
+            title={collapsed ? item.name : undefined}
+          >
+            <item.icon className="h-5 w-5 shrink-0" />
+            {!collapsed && <span>{item.name}</span>}
+          </Link>
+        );
+      })}
     </>
   );
 }

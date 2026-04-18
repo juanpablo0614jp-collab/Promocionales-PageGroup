@@ -1,15 +1,16 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { quotes, jobs, fundingSources } from "@/lib/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { quotes, jobs, fundingSources, cashMovements } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { addDays, differenceInDays } from "date-fns";
 
 export async function getDashboardData() {
-  const [allQuotes, allJobs, allFundingSources] = await Promise.all([
+  const [allQuotes, allJobs, allFundingSources, allMovements] = await Promise.all([
     db.select().from(quotes),
     db.select().from(jobs),
     db.select().from(fundingSources).where(eq(fundingSources.activo, true)),
+    db.select().from(cashMovements),
   ]);
 
   const pendingQuotes = allQuotes.filter(
@@ -20,14 +21,12 @@ export async function getDashboardData() {
   );
   const invoicedJobs = allJobs.filter((j) => j.estado === "facturado");
 
-  // Cotizaciones pendientes con mas de 5 dias sin respuesta
   const now = new Date();
   const staleQuotes = pendingQuotes.filter((q) => {
     const days = differenceInDays(now, new Date(q.fechaSolicitud));
     return days > 5;
   });
 
-  // Proximos pagos esperados (trabajos facturados)
   const upcomingPayments = invoicedJobs
     .filter((j) => j.fechaEmisionCc)
     .map((j) => {
@@ -46,18 +45,37 @@ export async function getDashboardData() {
     })
     .sort((a, b) => a.diasRestantes - b.diasRestantes);
 
-  // Total cuentas por cobrar
   const totalCuentasPorCobrar = invoicedJobs.reduce((sum, j) => {
     const quote = allQuotes.find((q) => q.id === j.quoteId);
     return sum + (quote?.precioTotal ?? 0);
   }, 0);
+
+  // Calculate saldo afuera per funding source
+  const fundingSourcesWithBalance = allFundingSources.map((source) => {
+    const sourceMovements = allMovements.filter(
+      (m) => m.fundingSourceId === source.id
+    );
+    const totalSalidas = sourceMovements
+      .filter((m) => m.tipo === "salida")
+      .reduce((sum, m) => sum + m.monto, 0);
+    const totalReposiciones = sourceMovements
+      .filter((m) => m.tipo === "entrada_reposicion")
+      .reduce((sum, m) => sum + m.monto, 0);
+
+    return {
+      id: source.id,
+      nombre: source.nombre,
+      tipo: source.tipo,
+      saldoAfuera: totalSalidas - totalReposiciones,
+    };
+  });
 
   return {
     cotizacionesPendientes: pendingQuotes.length,
     trabajosEnProduccion: jobsInProduction.length,
     trabajosFacturados: invoicedJobs.length,
     totalCuentasPorCobrar,
-    fundingSources: allFundingSources,
+    fundingSources: fundingSourcesWithBalance,
     staleQuotes: staleQuotes.map((q) => ({
       id: q.id,
       codigo: q.codigo,

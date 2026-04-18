@@ -1,8 +1,7 @@
-export default function FuentesPage() {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Fuentes de Fondos</h1>
-      <p className="text-muted-foreground">Proximamente...</p>
-    </div>
-  );
+import { getFundingSourcesWithBalances } from "@/lib/actions/funding-sources";
+import { FuentesPageClient } from "./page-client";
+
+export default async function FuentesPage() {
+  const sources = await getFundingSourcesWithBalances();
+  return <FuentesPageClient sources={sources} />;
 }

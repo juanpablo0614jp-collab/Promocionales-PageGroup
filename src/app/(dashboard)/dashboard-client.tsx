@@ -18,7 +18,7 @@ interface DashboardData {
   trabajosEnProduccion: number;
   trabajosFacturados: number;
   totalCuentasPorCobrar: number;
-  fundingSources: { id: number; nombre: string; tipo: string }[];
+  fundingSources: { id: number; nombre: string; tipo: string; saldoAfuera: number }[];
   staleQuotes: {
     id: number;
     codigo: string;
@@ -65,14 +65,14 @@ export function DashboardClient({ data }: { data: DashboardData }) {
           </p>
         </KpiCard>
 
-        <KpiCard title="Fuentes de fondos" href="/fuentes">
+        <KpiCard title="Saldo afuera por fuente" href="/fuentes">
           <div className="space-y-1">
             {data.fundingSources.map((fs) => (
               <div key={fs.id} className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{fs.nombre}</span>
-                <Badge variant="outline" className="text-xs">
-                  {fs.tipo === "tarjeta_credito" ? "TC" : "Efectivo"}
-                </Badge>
+                <span className={fs.saldoAfuera > 0 ? "font-medium text-red-600" : "text-muted-foreground"}>
+                  {formatCOP(fs.saldoAfuera)}
+                </span>
               </div>
             ))}
           </div>

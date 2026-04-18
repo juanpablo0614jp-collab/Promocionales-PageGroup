@@ -21,6 +21,7 @@ import {
   deleteQuote,
 } from "@/lib/actions/quotes";
 import { formatCOP, formatDate } from "@/lib/utils/format";
+import { generateQuotePdf } from "@/lib/utils/generate-quote-pdf";
 import { toast } from "sonner";
 
 interface Quote {
@@ -161,6 +162,23 @@ export function QuoteDetailClient({
               </Button>
             </>
           )}
+          <Button
+            variant="outline"
+            onClick={() =>
+              generateQuotePdf({
+                codigo: quote.codigo,
+                fechaSolicitud: quote.fechaSolicitud,
+                descripcion: quote.descripcion,
+                cantidad: quote.cantidad,
+                precioUnitario: quote.precioUnitario,
+                precioTotal: quote.precioTotal,
+                contacto: contact?.nombre ?? null,
+                notas: quote.notas,
+              })
+            }
+          >
+            Descargar PDF
+          </Button>
           {quote.estado !== "aprobada" && (
             <Button
               variant="destructive"

@@ -19,6 +19,7 @@ import { PaymentForm } from "@/components/trabajos/payment-form";
 import { advanceJobStatus, emitCuentaCobro } from "@/lib/actions/jobs";
 import { markPurchasePaid } from "@/lib/actions/purchases";
 import { deletePaymentReceived } from "@/lib/actions/payments";
+import { uploadAttachment, deleteAttachment } from "@/lib/actions/attachments";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -80,20 +81,33 @@ interface FundingSource {
   nombre: string;
 }
 
+interface Attachment {
+  id: number;
+  jobId: number;
+  nombre: string;
+  url: string;
+  tipo: string;
+  tamano: number;
+  createdAt: Date;
+}
+
 export function JobDetailClient({
   data,
   suppliers,
   fundingSources,
+  attachments,
 }: {
   data: JobDetails;
   suppliers: Supplier[];
   fundingSources: FundingSource[];
+  attachments: Attachment[];
 }) {
   const router = useRouter();
   const { job, quote, purchases, payments, kpis } = data;
   const [ccOpen, setCcOpen] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [payPurchaseId, setPayPurchaseId] = useState<number | null>(null);
   const [payFundingSourceId, setPayFundingSourceId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -132,6 +146,26 @@ export function JobDetailClient({
     setLoading(false);
     if (result.error) toast.error(result.error);
     else { toast.success("Pago eliminado"); router.refresh(); }
+  }
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.set("file", file);
+    setUploading(true);
+    const result = await uploadAttachment(job.id, formData);
+    setUploading(false);
+    e.target.value = "";
+    if (result.error) toast.error(result.error);
+    else { toast.success("Archivo subido"); router.refresh(); }
+  }
+
+  async function handleDeleteAttachment(attachmentId: number) {
+    if (!confirm("¿Eliminar este archivo?")) return;
+    const result = await deleteAttachment(attachmentId);
+    if (result.error) toast.error(result.error);
+    else { toast.success("Archivo eliminado"); router.refresh(); }
   }
 
   async function handleMarkPaid(formData: FormData) {
@@ -307,6 +341,89 @@ export function JobDetailClient({
                           Pagar
                         </Button>
                       )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Archivos adjuntos */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Archivos adjuntos ({attachments.length})</CardTitle>
+            <div>
+              <input
+                type="file"
+                id="fileUpload"
+                className="hidden"
+                onChange={handleUpload}
+                accept="image/*,.pdf,.xlsx,.xls,.docx,.doc,.csv"
+              />
+              <Button
+                size="sm"
+                disabled={uploading}
+                onClick={() => document.getElementById("fileUpload")?.click()}
+              >
+                {uploading ? "Subiendo..." : "Subir archivo"}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {attachments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No hay archivos adjuntos
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Tamano</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead className="w-[120px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {attachments.map((a) => (
+                  <TableRow key={a.id}>
+                    <TableCell>
+                      <a
+                        href={a.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline font-medium"
+                      >
+                        {a.nombre}
+                      </a>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {a.tipo.split("/").pop()}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {a.tamano < 1024
+                        ? `${a.tamano} B`
+                        : a.tamano < 1024 * 1024
+                          ? `${(a.tamano / 1024).toFixed(0)} KB`
+                          : `${(a.tamano / (1024 * 1024)).toFixed(1)} MB`}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatDate(a.createdAt)}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteAttachment(a.id)}
+                      >
+                        Eliminar
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

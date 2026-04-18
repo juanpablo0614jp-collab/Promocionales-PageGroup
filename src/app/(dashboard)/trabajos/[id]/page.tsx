@@ -1,5 +1,6 @@
 import { getJobWithDetails } from "@/lib/actions/jobs";
 import { getSuppliers } from "@/lib/actions/suppliers";
+import { getAttachments } from "@/lib/actions/attachments";
 import { db } from "@/lib/db";
 import { fundingSources } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -15,10 +16,11 @@ export default async function JobDetailPage({
   const jobId = parseInt(id, 10);
   if (isNaN(jobId)) notFound();
 
-  const [data, suppliers, allFundingSources] = await Promise.all([
+  const [data, suppliers, allFundingSources, jobAttachments] = await Promise.all([
     getJobWithDetails(jobId),
     getSuppliers(),
     db.select().from(fundingSources).where(eq(fundingSources.activo, true)),
+    getAttachments(jobId),
   ]);
 
   if (!data) notFound();
@@ -28,6 +30,7 @@ export default async function JobDetailPage({
       data={data}
       suppliers={suppliers}
       fundingSources={allFundingSources}
+      attachments={jobAttachments}
     />
   );
 }

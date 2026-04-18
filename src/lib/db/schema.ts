@@ -160,8 +160,21 @@ export const cashMovements = pgTable("cash_movements", {
   ),
   notas: text("notas"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  
+
 });
+
+// ── Archivos adjuntos ──────────────────────────────────────────────
+
+export const attachments = pgTable("attachments", {
+  id: serial("id").primaryKey(),
+  jobId: integer("job_id").references(() => jobs.id).notNull(),
+  nombre: text("nombre").notNull(),
+  url: text("url").notNull(),
+  tipo: text("tipo").notNull(), // MIME type
+  tamano: integer("tamano").notNull(), // bytes
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // ── Auth.js (NextAuth v5) ────────────────────────────────────────────────────
 
 export const users = pgTable("user", {
